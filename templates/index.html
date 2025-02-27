@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Management Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --success-color: #4CAF50;
+            --warning-color: #FFC107;
+            --error-color: #F44336;
+            --background-color: #f0f2f5;
+            --card-background: #fff;
+            --text-color: #333;
+            --border-radius: 8px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+        }
+
+        .refresh-info {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: var(--card-background);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-normal { background-color: var(--success-color); }
+        .status-warning { background-color: var(--warning-color); }
+        .status-error { background-color: var(--error-color); }
+
+        .alerts-container {
+            margin-top: 15px;
+        }
+
+        .alert {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .alert.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left-color: var(--error-color);
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .metric:hover {
+            background-color: #e9ecef;
+        }
+
+        .card-loader {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Dark mode styles */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background-color: #121212;
+                --card-background: #1e1e1e;
+                --text-color: #e0e0e0;
+                --primary-color: #3498db;
+            }
+
+            .metric {
+                background-color: #2a2a2a;
+            }
+
+            .metric:hover {
+                background-color: #333;
+            }
+
+            .alert {
+                background-color: rgba(255, 243, 205, 0.1);
+                color: #ffc107;
+            }
+
+            .alert.error {
+                background-color: rgba(248, 215, 218, 0.1);
+                color: #f44336;
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .refresh-info {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Infrastructure Management Dashboard</h1>
+            <div class="refresh-info">
+                Last updated: <span id="last-updated">-</span>
+                <button id="refresh-button" class="refresh-button">Refresh Now</button>
+            </div>
+        </div>
+        
+        <div class="dashboard-grid">
+            <div class="card" id="network-status">
+                <h2>
+                    <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6.343 6.343a8 8 0 1 1 11.314 11.314M4.929 4.929l14.142 14.142"/>
+                        <path d="M16.95 16.95A7.97 7.97 0 0 0 19 12a8 8 0 0 0-8-8 7.97 7.97 0 0 0-4.95 2.05M12 16a4 4 0 0 0 4-4 4 4 0 0 0-4-4 4 4 0 0 0-4 4"/>
+                    </svg>
+                    Network Status
+                </h2>
+                <div id="network-metrics">
+                    <div class="card-loader">
+                        <span class="loading-spinner"></span> Loading network data...
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="maintenance">
+                <h2>
+                    <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                    Maintenance Predictions
+                </h2>
+                <div id="maintenance-data">
+                    <div class="card-loader">
+                        <span class="loading-spinner"></span> Loading maintenance data...
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="cost">
+                <h2>
+                    <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                    Cost Analysis
+                </h2>
+                <div id="cost-data">
+                    <div class="card-loader">
+                        <span class="loading-spinner"></span> Loading cost data...
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="energy">
+                <h2>
+                    <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    Energy Metrics
+                </h2>
+                <div id="energy-data">
+                    <div class="card-loader">
+                        <span class="loading-spinner"></span> Loading energy data...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:5000/api';
+        const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+        
+        // State management
+        let dashboardState = {
+            network: null,
+            maintenance: null,
+            cost: null,
+            energy: null,
+            lastUpdated: null,
+            refreshTimer: null,
+            isRefreshing: false
+        };
+
+        // DOM elements
+        const elements = {
+            lastUpdated: document.getElementById('last-updated'),
+            refreshButton: document.getElementById('refresh-button'),
+            networkMetrics: document.getElementById('network-metrics'),
+            maintenanceData: document.getElementById('maintenance-data'),
+            costData: document.getElementById('cost-data'),
+            energyData: document.getElementById('energy-data')
+        };
+
+        // Utility functions
+        function formatNumber(num) {
+            return num.toLocaleString('en-US', {
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp).toLocaleTimeString();
+        }
+
+        function createMetricElement(label, value) {
+            return `
+                <div class="metric">
+                    <span>${label}:</span>
+                    <strong>${value}</strong>
+                </div>
+            `;
+        }
+
+        // API functions
+        async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        }
+
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetchWithTimeout(`${API_BASE_URL}/${endpoint}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                throw error;
+            }
+        }
+
+        // UI update functions
+        function updateNetworkStatus(data) {
+            let html = '';
+            
+            if (!data) {
+                html = createErrorMessage('Network data unavailable');
+            } else {
+                // Add status indicator
+                const statusMap = {
+                    'normal': { class: 'status-normal', label: 'Normal' },
+                    'warning': { class: 'status-warning', label: 'Warning' },
+                    'error': { class: 'status-error', label: 'Critical' }
+                };
+                
+                const status = statusMap[data.status] || statusMap.warning;
+                html += `<div class="metric">
+                    <span>Status:</span>
+                    <strong><span class="status-indicator ${status.class}"></span>${status.label}</strong>
+                </div>`;
+
+                // Add metrics
+                if (data.analysis) {
+                    html += createMetricElement('Bandwidth Usage', `${formatNumber(data.analysis.bandwidth_usage)} bytes/s`);
+                    html += createMetricElement('Packet Loss Rate', `${(data.analysis.packet_loss_rate * 100).toFixed(2)}%`);
+                    html += createMetricElement('Network Latency', `${formatNumber(data.analysis.network_latency)}ms`);
+                }
+
+                // Add alerts if any
+                if (data.alerts && data.alerts.length > 0) {
+                    html += '<div class="alerts-container">';
+                    data.alerts.forEach(alert => {
+                        const alertClass = alert.toLowerCase().includes('critical') ? 'alert error' : 'alert';
+                        html += `<div class="${alertClass}">${alert}</div>`;
+                    });
+                    html += '</div>';
+                }
+            }
+
+            elements.networkMetrics.innerHTML = html;
+        }
+
+        function updateMaintenancePredictions(data) {
+            let html = '';
+            
+            if (!data) {
+                html = createErrorMessage('Maintenance data unavailable');
+            } else {
+                for (const [component, prediction] of Object.entries(data)) {
+                    html += createMetricElement(component, prediction);
+                }
+            }
+            
+            elements.maintenanceData.innerHTML = html;
+        }
+
+        function updateCostAnalysis(data) {
+            let html = '';
+            
+            if (!data) {
+                html = createErrorMessage('Cost data unavailable');
+            } else {
+                for (const [category, cost] of Object.entries(data)) {
+                    html += createMetricElement(category, `$${formatNumber(cost)}`);
+                }
+            }
+            
+            elements.costData.innerHTML = html;
+        }
+
+        function updateEnergyMetrics(data) {
+            let html = '';
+            
+            if (!data) {
+                html = createErrorMessage('Energy data unavailable');
+            } else {
+                for (const [metric, value] of Object.entries(data)) {
+                    html += createMetricElement(metric, value);
+                }
+            }
+            
+            elements.energyData.innerHTML = html;
+        }
+
+        function createErrorMessage(message) {
+            return `
+                <div class="alert error">
+                    ${message}. <button class="retry-button" data-action="retry">Retry</button>
+                </div>
+            `;
+        }
+
+        function updateLastUpdatedTime() {
+            dashboardState.lastUpdated = new Date();
+            elements.lastUpdated.textContent = formatTimestamp(dashboardState.lastUpdated);
+        }
+
+        // Main functions
+        async function fetchAllData() {
+            dashboardState.isRefreshing = true;
+            elements.refreshButton.disabled = true;
+            
+            try {
+                // Fetch all data in parallel
+                const [network, maintenance, cost, energy] = await Promise.allSettled([
+                    fetchData('network/status'),
+                    fetchData('maintenance/predictions'),
+                    fetchData('cost/analysis'),
+                    fetchData('energy/metrics')
+                ]);
+
+                // Update state with results
+                dashboardState.network = network.status === 'fulfilled' ? network.value : null;
+                dashboardState.maintenance = maintenance.status === 'fulfilled' ? maintenance.value : null;
+                dashboardState.cost = cost.status === 'fulfilled' ? cost.value : null;
+                dashboardState.energy = energy.status === 'fulfilled' ? energy.value : null;
+                
+                // Update UI
+                updateNetworkStatus(dashboardState.network);
+                updateMaintenancePredictions(dashboardState.maintenance);
+                updateCostAnalysis(dashboardState.cost);
+                updateEnergyMetrics(dashboardState.energy);
+                updateLastUpdatedTime();
+            } catch (error) {
+                console.error('Error refreshing dashboard:', error);
+            } finally {
+                dashboardState.isRefreshing = false;
+                elements.refreshButton.disabled = false;
+            }
+        }
+
+        function setupEventListeners() {
+            // Refresh button click
+            elements.refreshButton.addEventListener('click', () => {
+                if (!dashboardState.isRefreshing) {
+                    fetchAllData();
+                }
+            });
+            
+            // Retry buttons in error messages
+            document.addEventListener('click', (event) => {
+                if (event.target.classList.contains('retry-button')) {
+                    fetchAllData();
+                }
+            });
+            
+            // Setup auto refresh
+            dashboardState.refreshTimer = setInterval(fetchAllData, AUTO_REFRESH_INTERVAL);
+            
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                if (dashboardState.refreshTimer) {
+                    clearInterval(dashboardState.refreshTimer);
+                }
+            });
+        }
+
+        // Initialize the dashboard
+        function initDashboard() {
+            setupEventListeners();
+            fetchAllData();
+        }
+
+        // Start the dashboard when DOM is ready
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
